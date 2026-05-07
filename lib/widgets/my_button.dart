@@ -5,11 +5,14 @@ class MyButton extends StatelessWidget {
   final VoidCallback onPressed;
   final Color? color;
 
+  final bool loading;
+
   const MyButton({
     super.key,
     required this.text,
     required this.onPressed,
     this.color,
+    this.loading = false,
   });
 
   @override
@@ -31,15 +34,24 @@ class MyButton extends StatelessWidget {
           ],
         ),
         child: Center(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
+          child: loading
+              ? const SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Text(
+                  text,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
         ),
       ),
     );

@@ -55,12 +55,16 @@ class _SignupScreenState extends State<SignupScreen> {
         if (mounted) Navigator.pop(context);
 
         if (userCredential.user != null) {
-          Navigator.pop(context);
-          Dialogs.showSnackbar(
-            context,
-            "Account created successfully!",
-            color: Colors.green,
-          );
+          await userCredential.user!.sendEmailVerification();
+
+          if (mounted) {
+            Navigator.popUntil(context, (route) => route.isFirst);
+            Dialogs.showSnackbar(
+              context,
+              "Account created! Please verify your email.",
+              color: Colors.green,
+            );
+          }
         }
       } on FirebaseAuthException catch (ex) {
         if (mounted) Navigator.pop(context);

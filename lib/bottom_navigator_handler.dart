@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hichat/api/api.dart';
 import 'package:hichat/screens/call_screen.dart';
 import 'package:hichat/screens/home_screen.dart';
 import 'package:hichat/screens/profile_screen.dart';
@@ -12,6 +13,13 @@ class BottomNavigatorHandler extends StatefulWidget {
 
 class _BottomNavigatorHandlerState extends State<BottomNavigatorHandler> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    Api.getSelfInfo();
+  }
+
   final List<Widget> _pages = [
     const HomeScreen(),
     const CallScreen(),

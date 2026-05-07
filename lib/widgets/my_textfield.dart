@@ -5,6 +5,8 @@ class MyTextField extends StatefulWidget {
   final IconData? icon;
   final bool isPassword;
   final TextEditingController? controller;
+  final bool readOnly;
+  final Function(String)? onChanged;
 
   const MyTextField({
     super.key,
@@ -12,6 +14,8 @@ class MyTextField extends StatefulWidget {
     this.icon,
     this.isPassword = false,
     this.controller,
+    this.readOnly = false,
+    this.onChanged,
   });
 
   @override
@@ -38,6 +42,8 @@ class _MyTextFieldState extends State<MyTextField> {
       child: TextField(
         controller: widget.controller,
         obscureText: _isObscured,
+        readOnly: widget.readOnly,
+        onChanged: widget.onChanged,
         style: const TextStyle(color: Colors.black87, fontSize: 16),
         decoration: InputDecoration(
           hintText: widget.hintText,

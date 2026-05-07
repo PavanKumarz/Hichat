@@ -1,8 +1,6 @@
 import 'dart:developer';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:hichat/bottom_navigator_handler.dart';
 import 'package:hichat/screens/signup_screen.dart';
 import 'package:hichat/helper/dialogs.dart';
 import 'package:hichat/widgets/my_textfield.dart';
@@ -42,11 +40,9 @@ class _SigninScreenState extends State<SigninScreen> {
         if (mounted) Navigator.pop(context);
 
         if (userCredential.user != null) {
-          Navigator.popUntil(context, (route) => route.isFirst);
-          Navigator.pushReplacement(
-            context,
-            CupertinoPageRoute(builder: (context) => BottomNavigatorHandler()),
-          );
+          if (mounted) {
+            Navigator.popUntil(context, (route) => route.isFirst);
+          }
         }
       } on FirebaseAuthException catch (ex) {
         if (mounted) Navigator.pop(context);
