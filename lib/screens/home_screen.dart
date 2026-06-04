@@ -141,18 +141,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   controller: _searchController,
                   onChanged: (val) {
                     _searchList.clear();
+                    final query = val.trim().toLowerCase();
 
                     for (var i in _list) {
-                      if (i.name.toLowerCase().contains(val.toLowerCase()) ||
-                          i.username.toLowerCase().contains(
-                            val.toLowerCase(),
-                          )) {
+                      if (i.name.toLowerCase().contains(query) ||
+                          i.username.toLowerCase().contains(query) ||
+                          i.email.toLowerCase().contains(query) ||
+                          i.displayName.toLowerCase().contains(query) ||
+                          i.displayHandle.toLowerCase().contains(query)) {
                         _searchList.add(i);
                       }
-                      setState(() {
-                        _isSearching = val.isNotEmpty;
-                      });
                     }
+
+                    setState(() {
+                      _isSearching = query.isNotEmpty;
+                    });
                   },
                 ),
               ),

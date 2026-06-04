@@ -30,6 +30,31 @@ class ChatUser {
     email = json['email'] ?? '';
   }
 
+  String get displayName {
+    final trimmedName = name.trim();
+    if (trimmedName.isNotEmpty) return trimmedName;
+
+    final trimmedUsername = username.trim();
+    if (trimmedUsername.isNotEmpty) return trimmedUsername;
+
+    final trimmedEmail = email.trim();
+    if (trimmedEmail.isNotEmpty) return trimmedEmail;
+
+    return 'Unknown user';
+  }
+
+  String get displayHandle {
+    final trimmedUsername = username.trim();
+    if (trimmedUsername.isNotEmpty) return '@$trimmedUsername';
+
+    final trimmedEmail = email.trim();
+    if (trimmedEmail.isNotEmpty) return trimmedEmail;
+
+    return 'No username';
+  }
+
+  String get avatarLabel => displayName[0].toUpperCase();
+
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     data['image'] = image;

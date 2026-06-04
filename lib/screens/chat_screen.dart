@@ -36,7 +36,10 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           title: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: Api.firestore.collection('users').doc(widget.user.id).snapshots(),
+            stream: Api.firestore
+                .collection('users')
+                .doc(widget.user.id)
+                .snapshots(),
             builder: (context, snapshot) {
               final userData = snapshot.data?.data();
               final currentUser = userData != null
@@ -53,7 +56,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         : null,
                     child: currentUser.image.isEmpty
                         ? Text(
-                            currentUser.name[0].toUpperCase(),
+                            currentUser.avatarLabel,
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -67,7 +70,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        currentUser.name,
+                        currentUser.displayName,
                         style: const TextStyle(
                           color: Colors.black87,
                           fontSize: 16,
@@ -116,7 +119,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     case ConnectionState.done:
                       final data = snapshot.data?.docs;
                       _list =
-                          data?.map((e) => Message.fromJson(e.data())).toList() ??
+                          data
+                              ?.map((e) => Message.fromJson(e.data()))
+                              .toList() ??
                           [];
 
                       if (_list.isNotEmpty) {
@@ -155,7 +160,7 @@ class _ChatScreenState extends State<ChatScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             offset: const Offset(0, -4),
             blurRadius: 10,
           ),

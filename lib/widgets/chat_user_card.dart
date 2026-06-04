@@ -71,9 +71,7 @@ class _ChatUserCardState extends State<ChatUserCard> {
                             )
                           : Center(
                               child: Text(
-                                widget.user.name.isNotEmpty
-                                    ? widget.user.name[0].toUpperCase()
-                                    : '?',
+                                widget.user.avatarLabel,
                                 style: const TextStyle(
                                   color: Colors.black87,
                                   fontWeight: FontWeight.bold,
@@ -94,7 +92,7 @@ class _ChatUserCardState extends State<ChatUserCard> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              widget.user.name,
+                              widget.user.displayName,
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -126,7 +124,7 @@ class _ChatUserCardState extends State<ChatUserCard> {
                                     ? _message!.type == MessageType.image
                                           ? 'Sent an image'
                                           : _message!.msg
-                                    : '@${widget.user.username}',
+                                    : widget.user.displayHandle,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
