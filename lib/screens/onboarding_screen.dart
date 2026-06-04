@@ -1,6 +1,9 @@
 import 'dart:developer';
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:hichat/api/api.dart';
 import 'package:hichat/bottom_navigator_handler.dart';
 import 'package:hichat/helper/dialogs.dart';
@@ -23,6 +26,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _isLoading = false;
   bool _isUsernameAvailable = true;
   bool _isCheckingUsername = false;
+  String? _image;
 
   @override
   void initState() {
@@ -63,6 +67,67 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  void _showBottomSheet() {
+    showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20), topRight: Radius.circular(20))),
+        builder: (_) {
+          return ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(top: 20, bottom: 40),
+            children: [
+              const Text('Pick Profile Picture',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          shape: const CircleBorder(),
+                          fixedSize: const Size(120, 120)),
+                      onPressed: () async {
+                        final ImagePicker picker = ImagePicker();
+                        final XFile? image = await picker.pickImage(
+                            source: ImageSource.gallery, imageQuality: 80);
+                        if (image != null) {
+                          setState(() {
+                            _image = image.path;
+                          });
+                          if (mounted) Navigator.pop(context);
+                        }
+                      },
+                      child: const Icon(Icons.image,
+                          size: 60, color: Colors.blue)),
+                  ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          shape: const CircleBorder(),
+                          fixedSize: const Size(120, 120)),
+                      onPressed: () async {
+                        final ImagePicker picker = ImagePicker();
+                        final XFile? image = await picker.pickImage(
+                            source: ImageSource.camera, imageQuality: 80);
+                        if (image != null) {
+                          setState(() {
+                            _image = image.path;
+                          });
+                          if (mounted) Navigator.pop(context);
+                        }
+                      },
+                      child: const Icon(Icons.camera_alt,
+                          size: 60, color: Colors.blue)),
+                ],
+              )
+            ],
+          );
+        });
+  }
+
   Future<void> _submit() async {
     final name = _nameController.text.trim();
     final username = _usernameController.text.trim();
@@ -91,7 +156,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       Api.me.name = name;
       Api.me.username = username;
 
-      await Api.updateUserInfo();
+      if (_image != null) {
+        await Api.updateProfilePicture(File(_image!));
+      } else {
+        await Api.updateUserInfo();
+      }
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -143,14 +212,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(height: 40),
 
                 Center(
-                  child: CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.grey[200],
-                    child: Icon(
-                      Icons.person_rounded,
-                      size: 60,
-                      color: Colors.grey[400],
-                    ),
+                  child: Stack(
+                    children: [
+                      _image != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(60),
+                              child: Image.file(
+                                File(_image!),
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : CircleAvatar(
+                              radius: 60,
+                              backgroundColor: Colors.grey[200],
+                              child: Icon(
+                                Icons.person_rounded,
+                                size: 60,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: MaterialButton(
+                          elevation: 1,
+                          onPressed: _showBottomSheet,
+                          shape: const CircleBorder(),
+                          color: Colors.white,
+                          child: const Icon(Icons.edit, color: Colors.blue),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 

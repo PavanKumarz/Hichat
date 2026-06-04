@@ -1,10 +1,14 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:hichat/models/chat_user_model.dart';
+import 'package:hichat/models/message_model.dart';
 
 class Api {
   static FirebaseAuth auth = FirebaseAuth.instance;
   static FirebaseFirestore firestore = FirebaseFirestore.instance;
+  static FirebaseStorage storage = FirebaseStorage.instance;
 
   static late ChatUser me;
 
@@ -32,8 +36,10 @@ class Api {
 
     if (snapshot.docs.isNotEmpty) {
       if (snapshot.docs.first.id == user.uid) return true;
+
       return false;
     }
+
     return true;
   }
 
@@ -45,8 +51,42 @@ class Api {
     });
   }
 
+  static Future<void> updateProfilePicture(File file) async {
+    final ext = file.path.split('.').last;
+
+    final ref = storage.ref().child('profile_pictures/${user.uid}.$ext');
+
+    await ref.putFile(file, SettableMetadata(contentType: 'image/$ext')).then((
+      p0,
+    ) {
+      print('Data Transferred: ${p0.bytesTransferred / 1000} kb');
+    });
+
+    me.image = await ref.getDownloadURL();
+
+    await firestore.collection('users').doc(user.uid).update({
+      'image': me.image,
+    });
+  }
+
   static Stream<QuerySnapshot<Map<String, dynamic>>> getAllUsers() {
-    return firestore.collection('users').snapshots();
+    return firestore
+        .collection('users')
+        .where('id', isNotEqualTo: user.uid)
+        .snapshots();
+  }
+
+  static Future<ChatUser?> getUserByUsername(String username) async {
+    final snapshot = await firestore
+        .collection('users')
+        .where('username', isEqualTo: username)
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      return ChatUser.fromJson(snapshot.docs.first.data());
+    }
+
+    return null;
   }
 
   static Future<void> createUser() async {
@@ -67,5 +107,79 @@ class Api {
         .collection('users')
         .doc(user.uid)
         .set(chatUser.toJson());
+  }
+
+  static Future<void> updateEmail(String newEmail) async {
+    await user.verifyBeforeUpdateEmail(newEmail);
+
+    me.email = newEmail;
+
+    await firestore.collection('users').doc(user.uid).update({
+      'email': newEmail,
+    });
+  }
+
+  static Future<void> updatePassword(String newPassword) async {
+    await user.updatePassword(newPassword);
+  }
+
+  static Future<void> updateActiveStatus(bool isOnline) async {
+    firestore.collection('users').doc(user.uid).update({
+      'isOnline': isOnline,
+
+      'lastActive': DateTime.now().millisecondsSinceEpoch.toString(),
+    });
+  }
+
+  static String getConversationID(String id) => user.uid.hashCode <= id.hashCode
+      ? '${user.uid}_$id'
+      : '${id}_${user.uid}';
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>> getAllMessages(
+    ChatUser chatUser,
+  ) {
+    return firestore
+        .collection('chats/${getConversationID(chatUser.id)}/messages/')
+        .orderBy('sent', descending: true)
+        .snapshots();
+  }
+
+  static Future<void> sendMessage(
+    ChatUser chatUser,
+    String msg,
+    MessageType type,
+  ) async {
+    final time = DateTime.now().millisecondsSinceEpoch.toString();
+
+    final Message message = Message(
+      toId: chatUser.id,
+      msg: msg,
+      read: '',
+      type: type,
+      fromId: user.uid,
+      sent: time,
+    );
+
+    final ref = firestore.collection(
+      'chats/${getConversationID(chatUser.id)}/messages/',
+    );
+    await ref.doc(time).set(message.toJson());
+  }
+
+  static Future<void> updateMessageReadStatus(Message message) async {
+    firestore
+        .collection('chats/${getConversationID(message.fromId)}/messages/')
+        .doc(message.sent)
+        .update({'read': DateTime.now().millisecondsSinceEpoch.toString()});
+  }
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>> getLastMessage(
+    ChatUser user,
+  ) {
+    return firestore
+        .collection('chats/${getConversationID(user.id)}/messages/')
+        .orderBy('sent', descending: true)
+        .limit(1)
+        .snapshots();
   }
 }

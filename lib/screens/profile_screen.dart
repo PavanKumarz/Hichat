@@ -1,21 +1,52 @@
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:hichat/api/api.dart';
 import 'package:hichat/helper/dialogs.dart';
 import 'package:hichat/widgets/glass_container.dart';
 import 'package:hichat/widgets/my_containr.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen>
+    with AutomaticKeepAliveClientMixin {
+  String? _image;
+  bool _isEditing = false;
+  late TextEditingController _nameController;
+  late Future<void> _getSelfInfoFuture;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _getSelfInfoFuture = Api.getSelfInfo();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     return MyContainer(
       child: Scaffold(
         body: SafeArea(
           child: FutureBuilder(
-            future: Api.getSelfInfo(),
+            future: _getSelfInfoFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -32,50 +63,104 @@ class ProfileScreen extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.grey[200]!,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(60),
-                                  child: Image.network(
-                                    Api.me.image,
-                                    width: 120,
-                                    height: 120,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            const CircleAvatar(
-                                              backgroundColor: Colors.cyan,
-                                              radius: 60,
-                                              child: Icon(
-                                                Icons.person,
-                                                color: Colors.white,
-                                                size: 25,
-                                              ),
+                              Stack(
+                                children: [
+                                  _image != null
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            60,
+                                          ),
+                                          child: Image.file(
+                                            File(_image!),
+                                            width: 120,
+                                            height: 120,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                      : Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.grey[200]!,
+                                              width: 2,
                                             ),
-                                  ),
-                                ),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              60,
+                                            ),
+                                            child: Image.network(
+                                              Api.me.image,
+                                              width: 120,
+                                              height: 120,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) => const CircleAvatar(
+                                                    backgroundColor:
+                                                        Colors.cyan,
+                                                    radius: 60,
+                                                    child: Icon(
+                                                      Icons.person,
+                                                      color: Colors.white,
+                                                      size: 25,
+                                                    ),
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                  if (_isEditing)
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: MaterialButton(
+                                        elevation: 1,
+                                        onPressed: () {
+                                          _showBottomSheet();
+                                        },
+                                        shape: const CircleBorder(),
+                                        color: Colors.white,
+                                        child: const Icon(
+                                          Icons.edit,
+                                          color: Colors.blue,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      Api.me.name,
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
+                                    _isEditing
+                                        ? TextField(
+                                            controller: _nameController,
+                                            decoration: const InputDecoration(
+                                              hintText: 'Enter your name',
+                                              border: InputBorder.none,
+                                              isCollapsed: true,
+                                            ),
+                                            style: const TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                              letterSpacing: -0.5,
+                                            ),
+                                          )
+                                        : Text(
+                                            Api.me.name,
+                                            style: const TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                              letterSpacing: -0.5,
+                                            ),
+                                          ),
                                     Text(
                                       '@${Api.me.username}',
                                       style: const TextStyle(
@@ -93,11 +178,36 @@ class ProfileScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 5),
                                     OutlinedButton(
-                                      onPressed: () {},
+                                      onPressed: () async {
+                                        if (_isEditing) {
+                                          if (_nameController.text
+                                              .trim()
+                                              .isNotEmpty) {
+                                            Api.me.name = _nameController.text
+                                                .trim();
+                                            await Api.updateUserInfo();
+                                            if (mounted) {
+                                              Dialogs.showSnackbar(
+                                                context,
+                                                'Profile updated successfully!',
+                                              );
+                                            }
+                                          }
+                                        } else {
+                                          _nameController.text = Api.me.name;
+                                        }
+                                        setState(() {
+                                          _isEditing = !_isEditing;
+                                        });
+                                      },
                                       style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.black87,
+                                        foregroundColor: _isEditing
+                                            ? Colors.blue
+                                            : Colors.black87,
                                         side: BorderSide(
-                                          color: Colors.grey[300]!,
+                                          color: _isEditing
+                                              ? Colors.blue
+                                              : Colors.grey[300]!,
                                         ),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(
@@ -109,7 +219,11 @@ class ProfileScreen extends StatelessWidget {
                                           vertical: 12,
                                         ),
                                       ),
-                                      child: const Text('Edit Profile'),
+                                      child: Text(
+                                        _isEditing
+                                            ? 'Save Changes'
+                                            : 'Edit Profile',
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -138,11 +252,6 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                     _buildSettingsItem(
-                      icon: Icons.person_outline_rounded,
-                      title: 'Account',
-                      subtitle: 'Privacy, security, change number',
-                    ),
-                    _buildSettingsItem(
                       icon: Icons.notifications_none_rounded,
                       title: 'Notifications',
                       subtitle: 'Message, group & call tones',
@@ -152,11 +261,7 @@ class ProfileScreen extends StatelessWidget {
                       title: 'Privacy',
                       subtitle: 'Block contacts, disappearing messages',
                     ),
-                    _buildSettingsItem(
-                      icon: Icons.help_outline_rounded,
-                      title: 'Help & Support',
-                      subtitle: 'FAQ, contact us, privacy policy',
-                    ),
+
                     const SizedBox(height: 32),
 
                     GestureDetector(
@@ -294,6 +399,91 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      builder: (_) {
+        return ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(top: 20, bottom: 40),
+          children: [
+            const Text(
+              'Pick Profile Picture',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    shape: const CircleBorder(),
+                    fixedSize: const Size(120, 120),
+                  ),
+                  onPressed: () async {
+                    final ImagePicker picker = ImagePicker();
+                    final XFile? image = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      imageQuality: 80,
+                    );
+                    if (image != null) {
+                      setState(() {
+                        _image = image.path;
+                      });
+                      if (mounted) Navigator.pop(context);
+                      await Api.updateProfilePicture(File(_image!));
+                      setState(() {
+                        _image = null;
+                      });
+                    }
+                  },
+                  child: const Icon(Icons.image, size: 60, color: Colors.blue),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    shape: const CircleBorder(),
+                    fixedSize: const Size(120, 120),
+                  ),
+                  onPressed: () async {
+                    final ImagePicker picker = ImagePicker();
+                    final XFile? image = await picker.pickImage(
+                      source: ImageSource.camera,
+                      imageQuality: 80,
+                    );
+                    if (image != null) {
+                      setState(() {
+                        _image = image.path;
+                      });
+                      if (mounted) Navigator.pop(context);
+                      await Api.updateProfilePicture(File(_image!));
+                      setState(() {
+                        _image = null;
+                      });
+                    }
+                  },
+                  child: const Icon(
+                    Icons.camera_alt,
+                    size: 60,
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 }

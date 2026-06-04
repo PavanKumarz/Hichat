@@ -11,13 +11,34 @@ class BottomNavigatorHandler extends StatefulWidget {
   State<BottomNavigatorHandler> createState() => _BottomNavigatorHandlerState();
 }
 
-class _BottomNavigatorHandlerState extends State<BottomNavigatorHandler> {
+class _BottomNavigatorHandlerState extends State<BottomNavigatorHandler>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
     Api.getSelfInfo();
+    WidgetsBinding.instance.addObserver(this);
+    Api.updateActiveStatus(true);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (Api.auth.currentUser != null) {
+      if (state == AppLifecycleState.resumed) {
+        Api.updateActiveStatus(true);
+      } else {
+        Api.updateActiveStatus(false);
+      }
+    }
   }
 
   final List<Widget> _pages = [
@@ -29,7 +50,10 @@ class _BottomNavigatorHandlerState extends State<BottomNavigatorHandler> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
